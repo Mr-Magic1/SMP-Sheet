@@ -1,69 +1,85 @@
-import Image from "next/image";
+import Link from 'next/link';
+import { BookOpen, RotateCcw, BarChart2, Brain, Users, ArrowRight } from 'lucide-react';
+
+const features = [
+  {
+    icon: <BookOpen className="w-6 h-6" />,
+    title: "Complete DSA Sheet",
+    desc: "823+ problems from Codeforces, LeetCode, and CSES — all parsed from the SMP Prep Doc.",
+  },
+  {
+    icon: <RotateCcw className="w-6 h-6" />,
+    title: "Spaced Repetition",
+    desc: "SM-2 algorithm schedules your reviews so you never forget what you've learned.",
+  },
+  {
+    icon: <BarChart2 className="w-6 h-6" />,
+    title: "Analytics Dashboard",
+    desc: "Track your streaks, heatmaps, and progress across every topic.",
+  },
+  {
+    icon: <Brain className="w-6 h-6" />,
+    title: "Markdown Notes",
+    desc: "Write and auto-save notes for every problem — right inside the tracker.",
+  },
+];
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-background pointer-events-none" />
+        <div className="container mx-auto px-4 py-24 text-center relative">
+          <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-1.5 text-sm font-medium text-primary mb-6">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+            </span>
+            SMP Skill Prep Doc — Now Interactive
+          </div>
+
+          <h1 className="text-5xl sm:text-7xl font-black tracking-tight mb-6 bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
+            Sheet<span className="text-primary">Forge</span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
+            The ultimate DSA tracker built for SMP juniors. Track 823+ problems, revise smartly, and crush your internship OAs.
           </p>
+
+          <div className="flex flex-wrap justify-center gap-4">
+            <Link
+              href="/sheet"
+              className="flex items-center gap-2 bg-primary text-primary-foreground px-8 py-3 rounded-xl font-semibold text-lg hover:bg-primary/90 transition-all hover:scale-105 shadow-lg shadow-primary/20"
+            >
+              View Sheet <ArrowRight className="w-5 h-5" />
+            </Link>
+            <Link
+              href="/auth/register"
+              className="flex items-center gap-2 border border-border bg-card px-8 py-3 rounded-xl font-semibold text-lg hover:bg-accent transition-all"
+            >
+              Create Account
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      {/* Features */}
+      <section className="container mx-auto px-4 pb-24">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {features.map((f) => (
+            <div
+              key={f.title}
+              className="p-6 bg-card border border-border rounded-2xl hover:border-primary/40 hover:shadow-md transition-all group"
+            >
+              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-4 group-hover:bg-primary/20 transition-colors">
+                {f.icon}
+              </div>
+              <h3 className="font-bold text-lg mb-2">{f.title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+            </div>
+          ))}
         </div>
-      </main>
+      </section>
     </div>
   );
 }
