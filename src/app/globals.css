@@ -244,6 +244,9 @@
   html {
     @apply font-sans;
   }
+  a, button, [role="button"], label, select, input[type="button"], input[type="submit"] {
+    cursor: pointer !important;
+  }
 }
 
 /* Smooth transitions for theme switching */

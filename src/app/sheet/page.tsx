@@ -7,19 +7,27 @@ import { Resource } from '@/models/Resource';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import SheetClient from './SheetClient';
+import { unstable_cache } from 'next/cache';
 
-export const revalidate = 0;
+const getCachedSheetData = unstable_cache(
+  async () => {
+    await dbConnect();
 
-async function getSheetData() {
-  await dbConnect();
+    const topics = await Topic.find({}).sort({ order: 1 }).lean();
+    const patterns = await Pattern.find({}).sort({ order: 1 }).lean();
+    const problems = await Problem.find({}).sort({ order: 1 }).lean();
+    const resources = await Resource.find({}).lean();
 
-  const topics = await Topic.find({}).sort({ order: 1 }).lean();
-  const patterns = await Pattern.find({}).sort({ order: 1 }).lean();
-  const problems = await Problem.find({}).sort({ order: 1 }).lean();
-  const resources = await Resource.find({}).lean();
-
-  return { topics, patterns, problems, resources };
-}
+    return {
+      topics: JSON.parse(JSON.stringify(topics)),
+      patterns: JSON.parse(JSON.stringify(patterns)),
+      problems: JSON.parse(JSON.stringify(problems)),
+      resources: JSON.parse(JSON.stringify(resources)),
+    };
+  },
+  ['sheet-static-data-v1'],
+  { revalidate: 3600 * 24 } // cache for 24 hours
+);
 
 async function getUserProgress() {
   const session = await getServerSession(authOptions);
@@ -30,7 +38,7 @@ async function getUserProgress() {
   const progressDocs = await Progress.find({ userId }).lean();
 
   const progressMap: Record<string, string> = {};
-  progressDocs.forEach((p) => {
+  progressDocs.forEach((p: any) => {
     progressMap[p.problemId.toString()] = p.status;
   });
 
@@ -38,40 +46,60 @@ async function getUserProgress() {
 }
 
 export default async function SheetPage() {
-  const { topics, patterns, problems, resources } = await getSheetData();
+  const { topics, patterns, problems, resources } = await getCachedSheetData();
   const userProgress = await getUserProgress();
 
+  // Grouping for O(1) lookups
+  const resourcesByTopic: Record<string, any[]> = {};
+  resources.forEach((r: any) => {
+    const rid = (r.topicId || r.ownerId)?.toString();
+    if (!rid) return;
+    if (!resourcesByTopic[rid]) resourcesByTopic[rid] = [];
+    resourcesByTopic[rid].push({ id: r._id.toString(), kind: r.kind, title: r.title, url: r.url || '#' });
+  });
+
+  const problemsByPattern: Record<string, any[]> = {};
+  problems.forEach((pr: any) => {
+    const pid = pr.patternId.toString();
+    if (!problemsByPattern[pid]) problemsByPattern[pid] = [];
+    problemsByPattern[pid].push({
+      id: pr._id.toString(),
+      title: pr.title,
+      url: pr.url,
+      platform: pr.platform,
+      status: userProgress[pr._id.toString()] || 'todo',
+    });
+  });
+
+  const patternsByTopic: Record<string, any[]> = {};
+  patterns.forEach((pat: any) => {
+    const tid = pat.topicId.toString();
+    if (!patternsByTopic[tid]) patternsByTopic[tid] = [];
+    patternsByTopic[tid].push({
+      id: pat._id.toString(),
+      title: pat.title,
+      problems: problemsByPattern[pat._id.toString()] || [],
+    });
+  });
+
   // Serialize for client
-  // Note: reseed.js stores resources with topicId field; Resource model uses ownerId.
-  // We check both fields to support both the seed path and manual inserts.
-  const data = topics.map((topic: any) => ({
-    id: topic._id.toString(),
-    title: topic.title,
-    resources: resources
-      .filter((r: any) => {
-        const rid = (r.topicId || r.ownerId)?.toString();
-        return rid === topic._id.toString();
-      })
-      .map((r: any) => ({ id: r._id.toString(), kind: r.kind, title: r.title, url: r.url || '#' })),
-    patterns: patterns
-      .filter((p: any) => p.topicId.toString() === topic._id.toString())
-      .map((pat: any) => ({
-        id: pat._id.toString(),
-        title: pat.title,
-        problems: problems
-          .filter((pr: any) => pr.patternId.toString() === pat._id.toString())
-          .map((pr: any) => ({
-            id: pr._id.toString(),
-            title: pr.title,
-            url: pr.url,
-            platform: pr.platform,
-            status: userProgress[pr._id.toString()] || 'todo',
-          })),
-      })),
-  }));
+  const data = topics.map((topic: any) => {
+    const tid = topic._id.toString();
+    return {
+      id: tid,
+      title: topic.title,
+      resources: resourcesByTopic[tid] || [],
+      patterns: patternsByTopic[tid] || [],
+    };
+  });
 
   const totalProblems = problems.length;
-  const solvedProblems = Object.values(userProgress).filter((s) => s === 'solved').length;
+  let solvedProblems = 0;
+  problems.forEach((pr: any) => {
+    if (userProgress[pr._id.toString()] === 'solved') {
+      solvedProblems++;
+    }
+  });
 
   return <SheetClient data={data} totalProblems={totalProblems} solvedProblems={solvedProblems} />;
 }
