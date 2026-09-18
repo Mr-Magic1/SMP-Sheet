@@ -42,7 +42,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-8 p-8 border rounded-lg bg-card text-card-foreground shadow-sm">
         <div className="text-center">
           <h2 className="text-3xl font-bold tracking-tight">Sign In</h2>
-          <p className="text-muted-foreground mt-2">Welcome back to SheetForge</p>
+          <p className="text-muted-foreground mt-2">Welcome back to PrepTracker MNNIT</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -84,21 +84,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-border" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
-          </div>
-        </div>
 
-        <button
-          onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
-          className="w-full border py-2 rounded-md font-medium flex items-center justify-center gap-2 hover:bg-accent hover:text-accent-foreground transition-colors"
-        >
-          Google
-        </button>
 
         <p className="text-center text-sm text-muted-foreground">
           Don't have an account?{' '}

@@ -43,7 +43,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-md space-y-8 p-8 border rounded-lg bg-card text-card-foreground shadow-sm">
         <div className="text-center">
           <h2 className="text-3xl font-bold tracking-tight">Create Account</h2>
-          <p className="text-muted-foreground mt-2">Join SheetForge today</p>
+          <p className="text-muted-foreground mt-2">Join PrepTracker MNNIT today</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

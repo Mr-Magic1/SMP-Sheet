@@ -3,6 +3,7 @@
 import dbConnect from "@/lib/db";
 import { Progress } from "@/models/Progress";
 import { ActivityLog } from "@/models/ActivityLog";
+import { User } from "@/models/User";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
@@ -76,6 +77,39 @@ export async function updateProgressAction(
       { $inc: { solvedCount: 1 } },
       { upsert: true }
     );
+    
+    // Streak logic
+    const user = await User.findById(userId);
+    if (user) {
+      const lastActive = user.streak?.lastActiveDate;
+      let newCurrent = user.streak?.current || 0;
+      let newLongest = user.streak?.longest || 0;
+
+      // Calculate yesterday's date string
+      const yesterday = new Date(Date.now() - 86400000 - tzOffset);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+      if (lastActive === yesterdayStr) {
+        // Solved yesterday, increment streak
+        newCurrent += 1;
+      } else if (lastActive !== localISOTime) {
+        // Missed yesterday (and not already solved today), streak resets to 1
+        newCurrent = 1;
+      }
+      // If lastActive === localISOTime, streak stays the same
+
+      if (newCurrent > newLongest) {
+        newLongest = newCurrent;
+      }
+
+      await User.findByIdAndUpdate(userId, {
+        $set: {
+          'streak.current': newCurrent,
+          'streak.longest': newLongest,
+          'streak.lastActiveDate': localISOTime
+        }
+      });
+    }
   }
 
   // PRD: "No automatic, silent additions."

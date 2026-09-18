@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     // Send email using nodemailer
     await sendEmail(
       email.toLowerCase(),
-      'SheetForge Verification Code',
+      'PrepTracker MNNIT Verification Code',
       `Your verification code is: ${otp}\nIt will expire in 15 minutes.`
     );
     

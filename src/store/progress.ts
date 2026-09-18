@@ -38,7 +38,7 @@ export const useProgressStore = create<ProgressState>()(
       resetAll: () => set({ progress: {} }),
     }),
     {
-      name: 'sheetforge-guest-progress',
+      name: 'preptracker-guest-progress',
     }
   )
 );

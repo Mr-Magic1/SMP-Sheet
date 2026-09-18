@@ -46,12 +46,12 @@ export default function DashboardClient({
 
   return (
     <div className="space-y-8">
-      {/* Local SheetForge Stats */}
+      {/* Local PrepTracker Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="p-6 border rounded-2xl bg-gradient-to-br from-card to-card/50 shadow-sm flex flex-col justify-between">
           <div>
             <h2 className="text-lg font-medium text-muted-foreground mb-2 flex items-center gap-2">
-              <Shield className="w-5 h-5 text-primary" /> SheetForge Master
+              <Shield className="w-5 h-5 text-primary" /> PrepTracker Master
             </h2>
             <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-emerald-400">
               {localSolvedCount}
@@ -64,7 +64,7 @@ export default function DashboardClient({
             <Activity className="w-5 h-5 text-orange-500" /> Current Streak
           </h2>
           <div className="text-5xl font-black text-orange-500">{user.streak?.current || 0} <span className="text-3xl">🔥</span></div>
-          <p className="text-sm text-muted-foreground mt-2">Keep it up! Your daily goal is {user.settings?.dailyGoal || 3} problems.</p>
+
         </div>
         <div className="p-6 border rounded-2xl bg-gradient-to-br from-card to-card/50 shadow-sm flex flex-col justify-between">
           <div>
@@ -76,17 +76,9 @@ export default function DashboardClient({
                 <span className="text-muted-foreground">Attempting</span>
                 <span className="font-bold">{analytics.totalAttempting}</span>
               </div>
-              <div className="flex justify-between border-b border-border/50 pb-1">
+              <div className="flex justify-between">
                 <span className="text-muted-foreground">Stuck</span>
                 <span className="font-bold">{analytics.totalStuck}</span>
-              </div>
-              <div className="flex justify-between border-b border-border/50 pb-1">
-                <span className="text-muted-foreground">Time Spent</span>
-                <span className="font-bold">{analytics.totalTimeHours}h</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Editorial Rate</span>
-                <span className="font-bold">{analytics.editorialRate}%</span>
               </div>
             </div>
           </div>

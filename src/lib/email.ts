@@ -18,7 +18,7 @@ export const sendEmail = async (to: string, subject: string, text: string, html?
 
   try {
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM || '"SheetForge" <noreply@sheetforge.com>',
+      from: process.env.EMAIL_FROM || '"PrepTracker MNNIT" <noreply@sheetforge.com>',
       to,
       subject,
       text,

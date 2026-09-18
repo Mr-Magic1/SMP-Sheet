@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     // Send email using nodemailer
     await sendEmail(
       email.toLowerCase(),
-      'SheetForge Password Reset Code',
+      'PrepTracker MNNIT Password Reset Code',
       `Your password reset code is: ${otp}\nIt will expire in 15 minutes.`
     );
     

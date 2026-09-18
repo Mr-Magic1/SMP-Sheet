@@ -17,17 +17,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SheetForge — DSA Tracker",
+  title: "PrepTracker MNNIT — DSA Tracker",
   description: "Track 728+ DSA problems from the SMP Skill Prep Doc. Heatmaps, notes, platform stats, and more.",
   keywords: ["DSA", "SMP", "LeetCode", "Codeforces", "CSES", "competitive programming", "practice tracker"],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "SheetForge",
+    title: "PrepTracker MNNIT",
   },
   openGraph: {
-    title: "SheetForge",
+    title: "PrepTracker MNNIT",
     description: "The ultimate DSA tracker built for SMP students.",
     type: "website",
   },
@@ -58,7 +58,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="SheetForge" />
+        <meta name="apple-mobile-web-app-title" content="PrepTracker MNNIT" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
       <body

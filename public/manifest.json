@@ -1,6 +1,6 @@
 {
-  "name": "SheetForge",
-  "short_name": "SheetForge",
+  "name": "PrepTracker MNNIT",
+  "short_name": "PrepTracker",
   "description": "DSA Practice Tracker for the SMP Prep Sheet — 728+ problems",
   "start_url": "/sheet",
   "display": "standalone",

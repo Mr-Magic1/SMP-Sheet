@@ -1,5 +1,4 @@
 import { NextAuthOptions } from 'next-auth';
-import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import dbConnect from './db';
 import { User } from '@/models/User';
@@ -13,10 +12,6 @@ export const authOptions: NextAuthOptions = {
     signIn: '/auth/login',
   },
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-    }),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {

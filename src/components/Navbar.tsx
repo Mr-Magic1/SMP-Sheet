@@ -80,7 +80,7 @@ export default function Navbar() {
           className="flex items-center gap-2 font-black text-lg tracking-tight text-primary hover:opacity-80 transition-opacity flex-shrink-0"
         >
           <Zap className="w-5 h-5 fill-primary" />
-          SheetForge
+          PrepTracker MNNIT
         </Link>
 
         {/* Nav links */}
