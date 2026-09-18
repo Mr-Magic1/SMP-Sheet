@@ -6,7 +6,7 @@ import { Progress } from "@/models/Progress";
 import { Problem } from "@/models/Problem";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 export async function updateHandlesAction(handles: Record<string, string>) {
   const session = await getServerSession(authOptions);
@@ -15,6 +15,8 @@ export async function updateHandlesAction(handles: Record<string, string>) {
   
   const userId = (session.user as any).id;
   await User.findByIdAndUpdate(userId, { $set: { handles } });
+  // @ts-ignore
+  revalidateTag(`user-${userId}-stats`);
   revalidatePath('/dashboard');
   return { success: true };
 }
@@ -107,6 +109,8 @@ export async function syncIntegrationsAction() {
     }
   }
 
+  // @ts-ignore
+  revalidateTag(`user-${userId}-stats`);
   revalidatePath('/profile');
   revalidatePath('/dashboard');
   revalidatePath('/sheet');

@@ -4,6 +4,7 @@ import { User } from '@/models/User';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import * as cheerio from 'cheerio';
+import { unstable_cache } from 'next/cache';
 
 export const maxDuration = 30;
 export const dynamic = 'force-dynamic';
@@ -203,24 +204,34 @@ export async function GET(req: Request) {
 
     const handles = user.handles || {};
 
-    const [leetcode, codeforces, codechef, github, atcoder, gfg] = await Promise.all([
-      fetchLeetCode(handles.leetcode || ''),
-      fetchCodeforces(handles.codeforces || ''),
-      fetchCodeChef(handles.codechef || ''),
-      fetchGithub(handles.github || ''),
-      fetchAtCoder(handles.atcoder || ''),
-      fetchGFG(handles.gfg || '')
-    ]);
+    const getCachedStats = async (uid: string, userHandles: any) => {
+      return unstable_cache(
+        async () => {
+          const [leetcode, codeforces, codechef, github, atcoder, gfg] = await Promise.all([
+            fetchLeetCode(userHandles.leetcode || ''),
+            fetchCodeforces(userHandles.codeforces || ''),
+            fetchCodeChef(userHandles.codechef || ''),
+            fetchGithub(userHandles.github || ''),
+            fetchAtCoder(userHandles.atcoder || ''),
+            fetchGFG(userHandles.gfg || '')
+          ]);
 
-    const stats = {
-      leetcode,
-      codeforces,
-      codechef,
-      github,
-      atcoder,
-      gfg,
-      cses: null // CSES scraping requires specific setup
+          return {
+            leetcode,
+            codeforces,
+            codechef,
+            github,
+            atcoder,
+            gfg,
+            cses: null
+          };
+        },
+        [`codolio-stats-${uid}`],
+        { revalidate: 3600 * 24, tags: [`user-${uid}-stats`] }
+      )();
     };
+
+    const stats = await getCachedStats(user._id.toString(), handles);
 
     return NextResponse.json(stats);
   } catch (error: any) {

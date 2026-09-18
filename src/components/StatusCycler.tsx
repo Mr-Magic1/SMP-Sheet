@@ -62,7 +62,10 @@ export default function StatusCycler({ problemId, initialStatus = "todo" }: Stat
   const [optimisticStatus, setOptimisticStatus] = useState<Status>(currentStatus);
   const [isPending, startTransition] = useTransition();
 
-  const handleCycle = () => {
+  const handleCycle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     const currentIndex = statuses.indexOf(optimisticStatus);
     const nextStatus = statuses[(currentIndex + 1) % statuses.length];
     
@@ -71,13 +74,13 @@ export default function StatusCycler({ problemId, initialStatus = "todo" }: Stat
     if (isGuest) {
       setGuestProgress(problemId, nextStatus);
     } else {
-      startTransition(async () => {
-        try {
-          await updateProgressAction(problemId, nextStatus);
-        } catch (e) {
+      // We don't await here to prevent the UI from freezing.
+      // startTransition fires it off in the background.
+      startTransition(() => {
+        updateProgressAction(problemId, nextStatus).catch(e => {
           console.error("Failed to update status", e);
           setOptimisticStatus(currentStatus); // revert
-        }
+        });
       });
     }
   };
@@ -88,8 +91,8 @@ export default function StatusCycler({ problemId, initialStatus = "todo" }: Stat
   return (
     <button
       onClick={handleCycle}
-      disabled={isPending}
-      className={`flex items-center justify-center p-2 rounded-md transition-all hover:bg-accent ${config.color} ${config.bg} ${isPending ? 'opacity-50' : ''}`}
+      // Removed disabled={isPending} so user can rapidly click
+      className={`flex items-center justify-center p-2 rounded-md transition-all hover:bg-accent ${config.color} ${config.bg} ${isPending ? 'opacity-70' : ''}`}
       title={config.label}
     >
       <Icon className="w-5 h-5" />
