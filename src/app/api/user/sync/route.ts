@@ -5,21 +5,47 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import * as cheerio from 'cheerio';
 
-export const maxDuration = 30; // Max timeout for scraping
-export const revalidate = 3600; // Cache for 1 hour
+export const maxDuration = 30;
+export const dynamic = 'force-dynamic';
 
 async function fetchLeetCode(handle: string) {
   if (!handle) return null;
   try {
-    const res = await fetch(`https://alfa-leetcode-api.onrender.com/${handle}`);
+    const query = `
+      query getUserProfile($username: String!) { 
+        matchedUser(username: $username) { 
+          submitStats: submitStatsGlobal { 
+            acSubmissionNum { difficulty count } 
+          } 
+          profile { ranking } 
+        } 
+        userContestRanking(username: $username) { rating } 
+      }
+    `;
+    const res = await fetch('https://leetcode.com/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables: { username: handle } })
+    });
+    
     if (!res.ok) return null;
-    const data = await res.json();
+    const { data } = await res.json();
+    
+    if (!data.matchedUser) return null; // user not found
+
+    const stats = data.matchedUser.submitStats.acSubmissionNum;
+    const getCount = (diff: string) => stats.find((s: any) => s.difficulty === diff)?.count || 0;
+
     return {
-      solved: data.totalSolved || 0,
-      rating: Math.round(data.contributionPoint || 0), // LC API sometimes doesn't expose contest rating directly without another call
-      rank: data.ranking || 'N/A'
+      solved: getCount('All'),
+      rating: Math.round(data.userContestRanking?.rating || 0),
+      rank: data.matchedUser.profile?.ranking || 'N/A',
+      easy: getCount('Easy'),
+      medium: getCount('Medium'),
+      hard: getCount('Hard')
     };
-  } catch {
+  } catch (e) {
+    console.error('LC sync error:', e);
     return null;
   }
 }
@@ -27,17 +53,47 @@ async function fetchLeetCode(handle: string) {
 async function fetchCodeforces(handle: string) {
   if (!handle) return null;
   try {
-    const res = await fetch(`https://codeforces.com/api/user.info?handles=${handle}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const user = data.result[0];
+    const [infoRes, statusRes] = await Promise.all([
+      fetch(`https://codeforces.com/api/user.info?handles=${handle}`),
+      fetch(`https://codeforces.com/api/user.status?handle=${handle}`)
+    ]);
+    
+    if (!infoRes.ok || !statusRes.ok) return null;
+    
+    const infoData = await infoRes.json();
+    const statusData = await statusRes.json();
+    
+    if (infoData.status !== 'OK' || statusData.status !== 'OK') return null;
+
+    const user = infoData.result[0];
+    
+    let easy = 0, medium = 0, hard = 0;
+    const solvedSet = new Set<string>();
+
+    for (const s of statusData.result) {
+      if (s.verdict === 'OK') {
+        const pId = `${s.problem.contestId}-${s.problem.index}`;
+        if (!solvedSet.has(pId)) {
+          solvedSet.add(pId);
+          const rating = s.problem.rating || 0;
+          if (rating > 0 && rating < 1200) easy++;
+          else if (rating >= 1200 && rating <= 1900) medium++;
+          else if (rating > 1900) hard++;
+        }
+      }
+    }
+
     return {
-      solved: user.friendOfCount || 0, // Codeforces API doesn't return total solved easily, use rating
+      solved: solvedSet.size,
       rating: user.rating || 0,
       rank: user.rank || 'Unrated',
+      easy,
+      medium,
+      hard,
       maxRating: user.maxRating || 0
     };
-  } catch {
+  } catch (e) {
+    console.error('CF sync error:', e);
     return null;
   }
 }
@@ -46,12 +102,17 @@ async function fetchCodeChef(handle: string) {
   if (!handle) return null;
   try {
     const res = await fetch(`https://codechef-api.vercel.app/handle/${handle}`);
-    if (!res.ok) {
+    if (!res.ok || (res.headers.get('content-type') && !res.headers.get('content-type')?.includes('application/json'))) {
       // Fallback to manual scraping
       const html = await fetch(`https://www.codechef.com/users/${handle}`).then(r => r.text());
       const $ = cheerio.load(html);
       const rating = parseInt($('.rating-number').text().trim()) || 0;
-      return { rating, solved: 0, rank: 'N/A' };
+      
+      const solvedMatch = html.match(/Total Problems Solved:\s*(\d+)/i);
+      const solved = solvedMatch ? parseInt(solvedMatch[1]) : 0;
+      const rank = $('.rating-star').text().trim() || 'N/A';
+      
+      return { rating, solved, rank };
     }
     const data = await res.json();
     return {
@@ -84,15 +145,30 @@ async function fetchGFG(handle: string) {
   if (!handle) return null;
   try {
     const res = await fetch(`https://geeks-for-geeks-api.vercel.app/${handle}`);
-    if (!res.ok) return null;
+    if (!res.ok || (res.headers.get('content-type') && !res.headers.get('content-type')?.includes('application/json'))) {
+      throw new Error("API failed");
+    }
     const data = await res.json();
+    if (data.error) throw new Error("API failed");
     return {
       solved: data.totalProblemsSolved || 0,
       rating: data.codingScore || 0,
       rank: 'N/A'
     };
   } catch {
-    return null;
+    // Fallback to manual scraping
+    try {
+      const html = await fetch(`https://www.geeksforgeeks.org/user/${handle}/`).then(r => r.text());
+      const scoreMatch = html.match(/\\?"coding_score\\?":(\d+)/i);
+      const solvedMatch = html.match(/\\?"total_problems_solved\\?":(\d+)/i);
+      return {
+        solved: solvedMatch ? parseInt(solvedMatch[1]) : 0,
+        rating: scoreMatch ? parseInt(scoreMatch[1]) : 0,
+        rank: 'N/A'
+      };
+    } catch {
+      return null;
+    }
   }
 }
 

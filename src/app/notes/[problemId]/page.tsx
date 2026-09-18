@@ -6,7 +6,8 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import NoteEditor from "@/components/NoteEditor";
 
-export default async function NotePage({ params }: { params: { problemId: string } }) {
+export default async function NotePage({ params }: { params: Promise<{ problemId: string }> }) {
+  const resolvedParams = await params;
   const session = await getServerSession(authOptions);
   
   if (!session || !session.user) {
@@ -15,13 +16,13 @@ export default async function NotePage({ params }: { params: { problemId: string
 
   await dbConnect();
   
-  const problem = await Problem.findById(params.problemId).lean();
+  const problem = await Problem.findById(resolvedParams.problemId).lean();
   if (!problem) {
     return <div>Problem not found</div>;
   }
 
   const userId = (session.user as any).id;
-  const note = await Note.findOne({ userId, problemId: params.problemId }).lean();
+  const note = await Note.findOne({ userId, problemId: resolvedParams.problemId }).lean();
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
@@ -31,7 +32,7 @@ export default async function NotePage({ params }: { params: { problemId: string
       </a>
       
       <NoteEditor 
-        problemId={params.problemId} 
+        problemId={resolvedParams.problemId} 
         initialBodyMd={note?.bodyMd || ""} 
         initialSnippets={note?.snippets || []} 
       />

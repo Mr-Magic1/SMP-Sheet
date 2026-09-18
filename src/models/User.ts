@@ -33,8 +33,6 @@ export interface IUser extends Document {
     lastActiveDate?: string;
     freezesLeft: number;
   };
-  xp: number;
-  level: number;
 }
 
 const UserSchema: Schema = new Schema({
@@ -70,8 +68,6 @@ const UserSchema: Schema = new Schema({
     lastActiveDate: { type: String },
     freezesLeft: { type: Number, default: 3 },
   },
-  xp: { type: Number, default: 0 },
-  level: { type: Number, default: 1 },
 }, { timestamps: true });
 
 export const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);

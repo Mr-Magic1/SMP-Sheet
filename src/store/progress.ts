@@ -15,6 +15,7 @@ interface ProgressState {
   progress: LocalProgress;
   setProgress: (problemId: string, status: Status, difficultyFelt?: number, usedEditorial?: boolean) => void;
   clearProgress: () => void;
+  resetAll: () => void;
 }
 
 export const useProgressStore = create<ProgressState>()(
@@ -34,6 +35,7 @@ export const useProgressStore = create<ProgressState>()(
           },
         })),
       clearProgress: () => set({ progress: {} }),
+      resetAll: () => set({ progress: {} }),
     }),
     {
       name: 'sheetforge-guest-progress',

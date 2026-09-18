@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -17,8 +17,33 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SheetForge",
-  description: "DSA Practice Tracker for the SMP Prep Sheet",
+  title: "SheetForge — DSA Tracker",
+  description: "Track 728+ DSA problems from the SMP Skill Prep Doc. Heatmaps, notes, platform stats, and more.",
+  keywords: ["DSA", "SMP", "LeetCode", "Codeforces", "CSES", "competitive programming", "practice tracker"],
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "SheetForge",
+  },
+  openGraph: {
+    title: "SheetForge",
+    description: "The ultimate DSA tracker built for SMP students.",
+    type: "website",
+  },
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/icon-192.png",
+    shortcut: "/icons/icon-192.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1a1b2e",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -28,13 +53,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="SheetForge" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
         <Providers>
           <Navbar />
           <CommandPalette />
-          <main className="min-h-[calc(100vh-3.5rem)]">{children}</main>
+          <main className="min-h-[calc(100vh-3.5rem)] pb-safe">{children}</main>
         </Providers>
       </body>
     </html>

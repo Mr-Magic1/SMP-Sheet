@@ -2,7 +2,6 @@
 
 import dbConnect from "@/lib/db";
 import { Progress } from "@/models/Progress";
-import { RevisionCard } from "@/models/RevisionCard";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
@@ -62,24 +61,12 @@ export async function updateProgressAction(
     );
   }
 
-  // Auto-add to Spaced Repetition if solved or marked as revisit
-  if (status === 'solved' || status === 'revisit') {
-    const existingCard = await RevisionCard.findOne({ userId, problemId });
-    if (!existingCard) {
-      await RevisionCard.create({
-        userId,
-        problemId,
-        dueDate: new Date(),
-        intervalDays: 0,
-        ease: 2.5,
-        reps: 0,
-        lapses: 0
-      });
-    }
-  }
+  // PRD: "No automatic, silent additions."
+  // Auto-add feature removed.
 
   revalidatePath('/sheet');
   revalidatePath('/profile');
   
   return { success: true, progress: progress.toJSON() };
 }
+

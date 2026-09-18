@@ -1,0 +1,42 @@
+{
+  "name": "SheetForge",
+  "short_name": "SheetForge",
+  "description": "DSA Practice Tracker for the SMP Prep Sheet — 728+ problems",
+  "start_url": "/sheet",
+  "display": "standalone",
+  "background_color": "#0e0f1a",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Sheet",
+      "short_name": "Sheet",
+      "description": "Open the DSA Practice Sheet",
+      "url": "/sheet",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Open your progress dashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "categories": ["education", "productivity"],
+  "screenshots": []
+}

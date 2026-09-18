@@ -42,12 +42,17 @@ export default async function SheetPage() {
   const userProgress = await getUserProgress();
 
   // Serialize for client
+  // Note: reseed.js stores resources with topicId field; Resource model uses ownerId.
+  // We check both fields to support both the seed path and manual inserts.
   const data = topics.map((topic: any) => ({
     id: topic._id.toString(),
     title: topic.title,
     resources: resources
-      .filter((r: any) => r.ownerId.toString() === topic._id.toString())
-      .map((r: any) => ({ id: r._id.toString(), kind: r.kind, title: r.title, url: r.url })),
+      .filter((r: any) => {
+        const rid = (r.topicId || r.ownerId)?.toString();
+        return rid === topic._id.toString();
+      })
+      .map((r: any) => ({ id: r._id.toString(), kind: r.kind, title: r.title, url: r.url || '#' })),
     patterns: patterns
       .filter((p: any) => p.topicId.toString() === topic._id.toString())
       .map((pat: any) => ({

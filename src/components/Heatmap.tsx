@@ -43,11 +43,44 @@ export default function Heatmap({ logs }: { logs: { date: string; count: number 
     return "bg-emerald-600 dark:bg-emerald-400";
   };
 
+  // Calculate month labels
+  const monthLabels = [];
+  let currentMonth = -1;
+  let colsInMonth = 0;
+  
+  weeks.forEach((week) => {
+    // Find the first valid day in the week to get the month
+    const validDay = week.find(d => d.count !== -1);
+    if (!validDay) return;
+    
+    const weekMonth = validDay.date.getMonth();
+    
+    if (weekMonth !== currentMonth) {
+      if (currentMonth !== -1) {
+        monthLabels.push({ label: format(new Date(2000, currentMonth, 1), "MMM"), cols: colsInMonth });
+      }
+      currentMonth = weekMonth;
+      colsInMonth = 1;
+    } else {
+      colsInMonth++;
+    }
+  });
+  if (currentMonth !== -1) {
+    monthLabels.push({ label: format(new Date(2000, currentMonth, 1), "MMM"), cols: colsInMonth });
+  }
+
   return (
     <div className="w-full overflow-x-auto pb-4">
+      <div className="flex text-xs text-muted-foreground mb-2 pl-4">
+        {monthLabels.map((m, i) => (
+          <div key={i} style={{ width: `${m.cols * 16}px` }} className="flex-shrink-0">
+            {m.label}
+          </div>
+        ))}
+      </div>
       <div className="flex gap-1 min-w-max">
         {weeks.map((week, i) => (
-          <div key={i} className="flex flex-col gap-1">
+          <div key={i} className="flex flex-col gap-1 w-3">
             {week.map((day, j) => (
               <div
                 key={j}

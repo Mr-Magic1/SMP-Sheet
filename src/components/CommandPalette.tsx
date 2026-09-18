@@ -41,14 +41,8 @@ export default function CommandPalette() {
           <CommandItem onSelect={() => runCommand(() => router.push("/sheet"))}>
             Go to Sheet
           </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => router.push("/revise"))}>
-            Go to Revision
-          </CommandItem>
           <CommandItem onSelect={() => runCommand(() => router.push("/dashboard"))}>
             Go to Dashboard
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => router.push("/profile"))}>
-            Go to Profile
           </CommandItem>
         </CommandGroup>
         <CommandSeparator />

@@ -8,6 +8,17 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
+export async function updateHandlesAction(handles: Record<string, string>) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) throw new Error("Unauthorized");
+  await dbConnect();
+  
+  const userId = (session.user as any).id;
+  await User.findByIdAndUpdate(userId, { $set: { handles } });
+  revalidatePath('/dashboard');
+  return { success: true };
+}
+
 async function fetchCodeforcesStatus(handle: string) {
   try {
     const res = await fetch(`https://codeforces.com/api/user.status?handle=${handle}`);

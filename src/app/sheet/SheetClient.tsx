@@ -1,94 +1,147 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import StatusCycler from "@/components/StatusCycler";
-import { Video, FileText, ChevronDown, ChevronRight, ExternalLink, Search, BookOpen, CheckCircle2, Circle } from "lucide-react";
+import ProgressGraph from "@/components/ProgressGraph";
+import {
+  Video,
+  FileText,
+  ChevronDown,
+  ChevronRight,
+  ExternalLink,
+  Search,
+  BookOpen,
+  CheckCircle2,
+  Circle,
+  Clock,
+  XCircle,
+  RefreshCw,
+  Trash2,
+  AlertTriangle,
+  X,
+  SlidersHorizontal,
+  Hash,
+  TrendingUp,
+  StickyNote,
+} from "lucide-react";
+import { useProgressStore } from "@/store/progress";
 
 type Problem = { id: string; title: string; url: string; platform: string; status: string };
 type Pattern = { id: string; title: string; problems: Problem[] };
 type Resource = { id: string; kind: string; title: string; url: string };
 type TopicData = { id: string; title: string; resources: Resource[]; patterns: Pattern[] };
 
-const PLATFORM_STYLES: Record<string, string> = {
-  leetcode: "bg-amber-500/15 text-amber-500 border border-amber-500/30",
-  codeforces: "bg-blue-500/15 text-blue-400 border border-blue-500/30",
-  cses: "bg-green-500/15 text-green-500 border border-green-500/30",
-  usaco: "bg-purple-500/15 text-purple-400 border border-purple-500/30",
-  interviewbit: "bg-pink-500/15 text-pink-400 border border-pink-500/30",
-  other: "bg-muted text-muted-foreground border border-border",
+/* ─── Platform config ─────────────────────────────── */
+const PLATFORM_CONFIG: Record<string, { label: string; style: string }> = {
+  leetcode:    { label: "LC",   style: "bg-amber-500/15 text-amber-400 border border-amber-500/30" },
+  codeforces:  { label: "CF",   style: "bg-blue-500/15 text-blue-400 border border-blue-500/30" },
+  cses:        { label: "CSES", style: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30" },
+  usaco:       { label: "USACO",style: "bg-violet-500/15 text-violet-400 border border-violet-500/30" },
+  interviewbit:{ label: "IB",   style: "bg-pink-500/15 text-pink-400 border border-pink-500/30" },
+  atcoder:     { label: "AC",   style: "bg-red-500/15 text-red-400 border border-red-500/30" },
+  gfg:         { label: "GFG",  style: "bg-green-600/15 text-green-400 border border-green-600/30" },
 };
 
-const PLATFORM_ICONS: Record<string, string> = {
-  leetcode: "LC",
-  codeforces: "CF",
-  cses: "CSES",
-  usaco: "USACO",
-  interviewbit: "IB",
-  other: "EXT",
-};
 
-const STATUS_STYLES: Record<string, string> = {
-  todo: "text-muted-foreground",
-  attempting: "text-yellow-500",
-  stuck: "text-red-500",
-  solved: "text-green-500",
-};
+/* ─── Filter options ────────────────────────────────── */
+type StatusFilter = "all" | "todo" | "attempting" | "stuck" | "solved";
 
+const FILTER_OPTIONS: { id: StatusFilter; label: string; icon: React.ReactNode; activeClass: string; badgeClass: string }[] = [
+  { id: "all",        label: "All",        icon: <SlidersHorizontal className="w-3.5 h-3.5" />, activeClass: "bg-primary text-primary-foreground border-primary",         badgeClass: "bg-white/20" },
+  { id: "todo",       label: "To Do",      icon: <Circle className="w-3.5 h-3.5" />,            activeClass: "bg-muted-foreground text-background border-muted-foreground", badgeClass: "bg-white/20" },
+  { id: "attempting", label: "Attempting", icon: <Clock className="w-3.5 h-3.5" />,             activeClass: "bg-yellow-500 text-black border-yellow-500",                  badgeClass: "bg-black/15" },
+  { id: "stuck",      label: "Stuck",      icon: <XCircle className="w-3.5 h-3.5" />,           activeClass: "bg-red-500 text-white border-red-500",                       badgeClass: "bg-white/20" },
+  { id: "solved",     label: "Solved",     icon: <CheckCircle2 className="w-3.5 h-3.5" />,      activeClass: "bg-green-500 text-white border-green-500",                   badgeClass: "bg-white/20" },
+];
+
+/* ─── ProblemRow ────────────────────────────────────── */
 function ProblemRow({ problem }: { problem: Problem }) {
+  const pc = PLATFORM_CONFIG[problem.platform] ?? { label: problem.platform.slice(0, 4).toUpperCase(), style: "bg-muted text-muted-foreground border border-border" };
+
   return (
-    <li className="group flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-colors border border-transparent hover:border-border">
-      <div className="flex items-center gap-3 min-w-0">
+    <li className="group flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-accent/40 transition-all border border-transparent hover:border-border/50 min-w-0">
+      {/* Status cycler */}
+      <div className="flex-shrink-0">
         <StatusCycler problemId={problem.id} initialStatus={problem.status as any} />
-        <a
-          href={problem.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm font-medium text-foreground hover:text-primary transition-colors truncate flex items-center gap-1 group/link"
-        >
-          {problem.title}
-          <ExternalLink className="w-3 h-3 opacity-0 group-hover/link:opacity-60 transition-opacity flex-shrink-0" />
-        </a>
       </div>
+
+      {/* Title */}
+      <a
+        href={problem.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex-1 min-w-0 flex items-center gap-1.5 text-sm font-medium text-foreground hover:text-primary transition-colors group/link"
+      >
+        <span className="truncate">{problem.title}</span>
+        <ExternalLink className="w-3 h-3 opacity-0 group-hover/link:opacity-50 transition-opacity flex-shrink-0" />
+      </a>
+
+      {/* Right side: platform badge + notes */}
       <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Notes link — always visible on mobile */}
         <Link
           href={`/notes/${problem.id}`}
-          className="text-xs text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity underline underline-offset-2"
+          className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+          title="Open notes"
         >
-          Notes
+          <StickyNote className="w-3.5 h-3.5" />
         </Link>
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0 ${PLATFORM_STYLES[problem.platform] || PLATFORM_STYLES.other}`}>
-          {PLATFORM_ICONS[problem.platform] || problem.platform}
+        <span className={`text-[10px] px-1.5 py-0.5 rounded-md uppercase tracking-wider font-bold flex-shrink-0 ${pc.style}`}>
+          {pc.label}
         </span>
       </div>
     </li>
   );
 }
 
-function PatternSection({ pattern, defaultOpen }: { pattern: Pattern; defaultOpen?: boolean }) {
-  const [open, setOpen] = useState(defaultOpen ?? true);
-  const solved = pattern.problems.filter(p => p.status === "solved").length;
+/* ─── PatternSection ────────────────────────────────── */
+function PatternSection({ pattern, filter }: { pattern: Pattern; filter: StatusFilter }) {
+  const [open, setOpen] = useState(true);
 
-  if (pattern.problems.length === 0) return null;
+  const displayProblems = useMemo(() =>
+    filter === "all" ? pattern.problems : pattern.problems.filter(p => p.status === filter),
+  [pattern.problems, filter]);
+
+  const solved = pattern.problems.filter(p => p.status === "solved").length;
+  const total  = pattern.problems.length;
+  const pct    = total > 0 ? Math.round((solved / total) * 100) : 0;
+
+  if (displayProblems.length === 0) return null;
 
   return (
-    <div className="border border-border rounded-lg overflow-hidden">
+    <div className="border border-border/50 rounded-xl overflow-hidden">
+      {/* Pattern header */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted/60 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 bg-muted/20 hover:bg-muted/40 transition-colors gap-2 text-left"
       >
-        <div className="flex items-center gap-2">
-          {open ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
-          <span className="font-medium text-sm">{pattern.title}</span>
-          <span className="text-xs text-muted-foreground">({pattern.problems.length})</span>
+        <div className="flex items-center gap-2 min-w-0">
+          {open
+            ? <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            : <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          }
+          <span className="font-semibold text-sm text-foreground truncate">{pattern.title}</span>
+          <span className="text-xs text-muted-foreground flex-shrink-0">({total})</span>
         </div>
-        {solved > 0 && (
-          <span className="text-xs text-green-500 font-semibold">{solved}/{pattern.problems.length} solved</span>
-        )}
+        <div className="flex items-center gap-2.5 flex-shrink-0">
+          {solved > 0 && (
+            <span className="text-xs text-green-500 font-bold whitespace-nowrap">{solved}/{total}</span>
+          )}
+          <div className="w-14 sm:w-20 h-1.5 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-green-500 rounded-full transition-all duration-500"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
       </button>
+
+      {/* Problems list */}
       {open && (
         <ul className="p-2 space-y-0.5">
-          {pattern.problems.map(problem => (
+          {displayProblems.map(problem => (
             <ProblemRow key={problem.id} problem={problem} />
           ))}
         </ul>
@@ -97,77 +150,114 @@ function PatternSection({ pattern, defaultOpen }: { pattern: Pattern; defaultOpe
   );
 }
 
-function TopicCard({ topic }: { topic: TopicData }) {
+/* ─── TopicCard ─────────────────────────────────────── */
+function TopicCard({ topic, filter }: { topic: TopicData; filter: StatusFilter }) {
   const [open, setOpen] = useState(false);
-  const totalProblems = topic.patterns.reduce((sum, p) => sum + p.problems.length, 0);
-  const solved = topic.patterns.reduce((sum, p) => sum + p.problems.filter(pr => pr.status === "solved").length, 0);
-  const pct = totalProblems > 0 ? Math.round((solved / totalProblems) * 100) : 0;
+
+  const total      = topic.patterns.reduce((s, p) => s + p.problems.length, 0);
+  const solved     = topic.patterns.reduce((s, p) => s + p.problems.filter(pr => pr.status === "solved").length, 0);
+  const attempting = topic.patterns.reduce((s, p) => s + p.problems.filter(pr => pr.status === "attempting").length, 0);
+  const stuck      = topic.patterns.reduce((s, p) => s + p.problems.filter(pr => pr.status === "stuck").length, 0);
+  const pct        = total > 0 ? Math.round((solved / total) * 100) : 0;
+
+  // When filter is active, hide topics with no matching problems
+  const hasMatch = filter === "all" || topic.patterns.some(p => p.problems.some(pr => pr.status === filter));
+  if (!hasMatch) return null;
+
+  // Also hide topics with zero problems (topics like "STL" or "Linked Lists" may be empty after dedup)
+  if (total === 0 && filter !== "all") return null;
 
   return (
-    <div className="border border-border rounded-xl overflow-hidden bg-card shadow-sm transition-shadow hover:shadow-md">
-      {/* Topic header */}
+    <div className="border border-border rounded-2xl overflow-hidden bg-card shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/30">
+      {/* Topic header button */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-5 py-4 hover:bg-accent/30 transition-colors"
+        className="w-full flex items-center gap-3 px-4 sm:px-5 py-4 hover:bg-accent/20 transition-colors text-left"
       >
-        <div className="flex items-center gap-3 text-left">
-          {open ? (
-            <ChevronDown className="w-5 h-5 text-primary flex-shrink-0" />
-          ) : (
-            <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-          )}
-          <div>
-            <h2 className="text-lg font-bold text-foreground">{topic.title}</h2>
-            <div className="flex items-center gap-3 mt-0.5">
-              <span className="text-xs text-muted-foreground">{totalProblems} problems</span>
-              {topic.resources.length > 0 && (
-                <span className="text-xs text-muted-foreground">· {topic.resources.length} resources</span>
-              )}
-              {solved > 0 && (
-                <span className="text-xs text-green-500 font-semibold">· {solved} solved</span>
-              )}
-            </div>
+        {/* Icon */}
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
+          open ? "bg-primary text-primary-foreground rotate-0" : "bg-muted/70 text-muted-foreground"
+        }`}>
+          {open
+            ? <ChevronDown className="w-4 h-4" />
+            : <ChevronRight className="w-4 h-4" />
+          }
+        </div>
+
+        {/* Text block */}
+        <div className="flex-1 min-w-0">
+          <h2 className="text-base font-bold text-foreground leading-tight">{topic.title}</h2>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              {total} problems
+            </span>
+            {topic.resources.length > 0 && (
+              <span className="text-xs text-muted-foreground">· {topic.resources.length} resources</span>
+            )}
+            {solved > 0 && (
+              <span className="text-xs text-green-500 font-semibold">✓ {solved} solved</span>
+            )}
+            {attempting > 0 && (
+              <span className="text-xs text-yellow-500 font-semibold">⏳ {attempting}</span>
+            )}
+            {stuck > 0 && (
+              <span className="text-xs text-red-500 font-semibold">⚡ {stuck} stuck</span>
+            )}
+            {topic.resources.length > 0 && (
+              <span className="text-xs text-muted-foreground">· {topic.resources.length} resources</span>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
-          {/* Progress bar */}
-          <div className="hidden sm:flex items-center gap-2">
-            <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full bg-green-500 rounded-full transition-all duration-500"
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-            <span className="text-xs text-muted-foreground w-8 text-right">{pct}%</span>
+
+        {/* Progress indicator (hidden on very small screens) */}
+        <div className="hidden sm:flex flex-col items-end gap-1.5 flex-shrink-0">
+          <span className="text-sm font-bold text-primary tabular-nums">{pct}%</span>
+          <div className="w-24 md:w-32 h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-primary to-primary/60 rounded-full transition-all duration-700"
+              style={{ width: `${pct}%` }}
+            />
           </div>
         </div>
       </button>
 
+      {/* Expanded content */}
       {open && (
-        <div className="px-5 pb-5 space-y-4 border-t border-border">
+        <div className="border-t border-border/60 px-4 sm:px-5 pb-5 space-y-3">
+          {/* Mobile progress bar */}
+          <div className="sm:hidden pt-3 flex items-center gap-3">
+            <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-primary to-primary/60 rounded-full transition-all"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <span className="text-sm font-bold text-primary flex-shrink-0">{pct}%</span>
+          </div>
+
           {/* Resources */}
-          {topic.resources.length > 0 && (
-            <div className="mt-4 p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg">
-              <h3 className="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2">
-                📚 Preparation Resources
+          {topic.resources.filter(r => r.url && r.url !== '#').length > 0 && (
+            <div className="mt-3 p-4 bg-primary/5 border border-primary/15 rounded-xl">
+              <h3 className="text-xs font-bold text-primary uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5" /> Study Resources
               </h3>
-              <ul className="space-y-1.5">
-                {topic.resources.map((res) => (
-                  <li key={res.id} className="flex items-center gap-2">
-                    {res.kind === "video" ? (
-                      <Video className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+              <ul className="space-y-2">
+                {topic.resources.filter(r => r.url && r.url !== '#').map((res) => (
+                  <li key={res.id} className="flex items-start gap-2">
+                    {res.kind === "video" || res.url?.includes('youtube') ? (
+                      <Video className="w-3.5 h-3.5 text-red-400 flex-shrink-0 mt-0.5" />
                     ) : (
-                      <FileText className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+                      <FileText className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
                     )}
                     <a
                       href={res.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-foreground hover:text-primary hover:underline transition-colors line-clamp-1"
+                      className="text-sm text-foreground hover:text-primary transition-colors flex-1 leading-snug"
                     >
                       {res.title}
                     </a>
-                    <ExternalLink className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                    <ExternalLink className="w-3 h-3 text-muted-foreground flex-shrink-0 mt-0.5" />
                   </li>
                 ))}
               </ul>
@@ -176,9 +266,15 @@ function TopicCard({ topic }: { topic: TopicData }) {
 
           {/* Patterns */}
           <div className="space-y-2 mt-2">
-            {topic.patterns.filter(p => p.problems.length > 0).map((pattern, i) => (
-              <PatternSection key={pattern.id} pattern={pattern} defaultOpen={i === 0} />
-            ))}
+            {topic.patterns
+              .filter(p => {
+                if (filter === "all") return p.problems.length > 0;
+                return p.problems.some(pr => pr.status === filter);
+              })
+              .map((pattern) => (
+                <PatternSection key={pattern.id} pattern={pattern} filter={filter} />
+              ))
+            }
           </div>
         </div>
       )}
@@ -186,6 +282,7 @@ function TopicCard({ topic }: { topic: TopicData }) {
   );
 }
 
+/* ─── Main SheetClient ──────────────────────────────── */
 export default function SheetClient({
   data,
   totalProblems,
@@ -195,97 +292,194 @@ export default function SheetClient({
   totalProblems: number;
   solvedProblems: number;
 }) {
-  const [search, setSearch] = useState("");
-
+  const [search, setSearch]     = useState("");
+  const [filter, setFilter]     = useState<StatusFilter>("all");
+  // Filter topics by search and status filter
   const filtered = useMemo(() => {
-    if (!search.trim()) return data;
-    const q = search.toLowerCase();
-    return data
-      .map(topic => ({
+    let result = data;
+    
+    // Apply status filter if not "all"
+    if (filter !== "all") {
+      result = result.map(topic => ({
         ...topic,
         patterns: topic.patterns
           .map(pat => ({
             ...pat,
-            problems: pat.problems.filter(
-              p => p.title.toLowerCase().includes(q) || p.platform.includes(q)
-            ),
+            problems: pat.problems.filter(p => p.status === filter)
           }))
-          .filter(pat => pat.problems.length > 0),
-      }))
-      .filter(topic => topic.patterns.length > 0 || topic.title.toLowerCase().includes(q));
-  }, [data, search]);
+          .filter(pat => pat.problems.length > 0)
+      })).filter(topic => topic.patterns.length > 0);
+    }
+    
+    // Apply search filter
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result
+        .map(topic => ({
+          ...topic,
+          patterns: topic.patterns
+            .map(pat => ({
+              ...pat,
+              problems: pat.problems.filter(
+                p => p.title.toLowerCase().includes(q) || p.platform.includes(q)
+              ),
+            }))
+            .filter(pat => pat.problems.length > 0),
+        }))
+        .filter(topic =>
+          topic.patterns.length > 0 || topic.title.toLowerCase().includes(q)
+        );
+    }
+    
+    return result;
+  }, [data, search, filter]);
 
   const pct = totalProblems > 0 ? Math.round((solvedProblems / totalProblems) * 100) : 0;
 
-  return (
-    <div className="container mx-auto py-8 px-4 max-w-5xl">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-extrabold tracking-tight flex items-center gap-2">
-          <BookOpen className="w-8 h-8 text-primary" />
-          SMP Prep Sheet
-        </h1>
-        <p className="text-muted-foreground mt-1">All questions organised from the SMP Skill Prep Doc</p>
+  // Flatten all problems for graph + filter counts
+  const allProblems = useMemo(() => {
+    const arr: Problem[] = [];
+    data.forEach(t => t.patterns.forEach(p => arr.push(...p.problems)));
+    return arr;
+  }, [data]);
 
-        {/* Overall progress */}
-        <div className="mt-4 flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
-          <div className="flex-1">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-sm font-medium">Overall Progress</span>
-              <span className="text-sm font-bold text-primary">{solvedProblems} / {totalProblems}</span>
+  const filterCounts = useMemo(() => ({
+    all:        allProblems.length,
+    todo:       allProblems.filter(p => p.status === "todo").length,
+    attempting: allProblems.filter(p => p.status === "attempting").length,
+    stuck:      allProblems.filter(p => p.status === "stuck").length,
+    solved:     allProblems.filter(p => p.status === "solved").length,
+  }), [allProblems]);
+
+  return (
+    <>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-5">
+
+        {/* ── Header ── */}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-2.5 leading-tight">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary flex items-center justify-center flex-shrink-0">
+                <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
+              </div>
+              SMP Prep Sheet
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm">
+              {totalProblems} unique problems · SMP Skill Prep Doc
+            </p>
+          </div>
+        </div>
+
+        {/* ── Overall progress ── */}
+        <div className="p-4 sm:p-5 bg-card border border-border rounded-2xl flex items-center gap-4 shadow-sm">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-sm font-semibold flex items-center gap-1.5 text-foreground">
+                <TrendingUp className="w-4 h-4 text-primary" />
+                Overall Progress
+              </span>
+              <span className="text-sm font-bold text-primary tabular-nums">{solvedProblems} / {totalProblems}</span>
             </div>
-            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+            <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-700"
+                className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-700"
                 style={{ width: `${pct}%` }}
               />
             </div>
           </div>
-          <div className="text-2xl font-black text-green-500">{pct}%</div>
+          <div className="text-3xl sm:text-4xl font-black text-primary flex-shrink-0 tabular-nums">
+            {pct}<span className="text-base sm:text-lg font-bold text-muted-foreground">%</span>
+          </div>
         </div>
-      </div>
 
-      {/* Search */}
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <input
-          type="text"
-          placeholder="Search problems, topics, platforms…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition"
-        />
-      </div>
+        {/* ── Progress Graph ── */}
+        <ProgressGraph problems={allProblems} />
 
-      {/* Stats row */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        {[
-          { label: "Topics", value: data.length, icon: <BookOpen className="w-4 h-4" /> },
-          { label: "Problems", value: totalProblems, icon: <Circle className="w-4 h-4" /> },
-          { label: "Solved", value: solvedProblems, icon: <CheckCircle2 className="w-4 h-4 text-green-500" /> },
-        ].map(stat => (
-          <div key={stat.label} className="bg-card border border-border rounded-xl p-4 flex flex-col gap-1">
-            <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
-              {stat.icon}
-              {stat.label}
+        {/* ── Stats grid ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+          {[
+            { label: "Topics",    value: data.filter(t => t.patterns.some(p => p.problems.length > 0)).length, icon: <BookOpen className="w-4 h-4" />, colorClass: "text-primary bg-primary/8 border-primary/20" },
+            { label: "Total",     value: totalProblems,                     icon: <Circle className="w-4 h-4" />,        colorClass: "text-foreground bg-card border-border" },
+            { label: "Solved",    value: solvedProblems,                    icon: <CheckCircle2 className="w-4 h-4" />,  colorClass: "text-green-500 bg-green-500/8 border-green-500/20" },
+            { label: "Remaining", value: totalProblems - solvedProblems,    icon: <Clock className="w-4 h-4" />,         colorClass: "text-yellow-500 bg-yellow-500/8 border-yellow-500/20" },
+          ].map(stat => (
+            <div key={stat.label} className={`border rounded-xl p-3 sm:p-4 flex flex-col gap-1.5 ${stat.colorClass}`}>
+              <div className="flex items-center gap-1.5 text-xs font-semibold opacity-75">
+                {stat.icon}
+                {stat.label}
+              </div>
+              <div className="text-2xl sm:text-3xl font-black tabular-nums">{stat.value}</div>
             </div>
-            <div className="text-2xl font-black">{stat.value}</div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      {/* Topics */}
-      <div className="space-y-3">
-        {filtered.map(topic => (
-          <TopicCard key={topic.id} topic={topic} />
-        ))}
-        {filtered.length === 0 && (
-          <div className="text-center py-16 text-muted-foreground">
-            <Search className="w-10 h-10 mx-auto mb-3 opacity-30" />
-            <p className="font-medium">No results for "{search}"</p>
+        {/* ── Search + Filter ── */}
+        <div className="space-y-2.5">
+          {/* Search input */}
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search problems, topics, platforms…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-10 pr-10 py-3 bg-card border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all placeholder:text-muted-foreground"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
-        )}
+
+          {/* Filter chips - scroll on mobile */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
+            {FILTER_OPTIONS.map(opt => {
+              const isActive = filter === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => setFilter(opt.id)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all border flex-shrink-0 ${
+                    isActive
+                      ? opt.activeClass
+                      : "bg-card border-border text-muted-foreground hover:bg-accent hover:text-foreground"
+                  }`}
+                >
+                  {opt.icon}
+                  <span>{opt.label}</span>
+                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold min-w-[20px] text-center ${
+                    isActive ? opt.badgeClass : "bg-muted"
+                  }`}>
+                    {filterCounts[opt.id]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Topics list ── */}
+        <div className="space-y-2.5">
+          {filtered.length === 0 ? (
+            <div className="text-center py-16 sm:py-20 text-muted-foreground">
+              <Search className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 opacity-20" />
+              <p className="font-semibold text-base sm:text-lg">No results for &ldquo;{search}&rdquo;</p>
+              <p className="text-sm mt-1 opacity-70">Try a different search term</p>
+            </div>
+          ) : (
+            filtered.map(topic => (
+              <TopicCard key={topic.id} topic={topic} filter={filter} />
+            ))
+          )}
+        </div>
+
+        {/* Bottom padding for mobile nav */}
+        <div className="h-4 md:h-2" />
       </div>
-    </div>
+    </>
   );
 }

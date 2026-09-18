@@ -5,7 +5,7 @@ const features = [
   {
     icon: <BookOpen className="w-6 h-6" />,
     title: "Complete DSA Sheet",
-    desc: "823+ problems from Codeforces, LeetCode, and CSES — all parsed from the SMP Prep Doc.",
+    desc: "728+ unique problems from Codeforces, LeetCode, and CSES — all parsed from the SMP Prep Doc.",
   },
   {
     icon: <RotateCcw className="w-6 h-6" />,
@@ -43,7 +43,7 @@ export default function Home() {
             Sheet<span className="text-primary">Forge</span>
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-            The ultimate DSA tracker built for SMP juniors. Track 823+ problems, revise smartly, and crush your internship OAs.
+            The ultimate DSA tracker built for SMP juniors. Track 728+ unique problems, revise smartly, and crush your internship OAs.
           </p>
 
           <div className="flex flex-wrap justify-center gap-4">
