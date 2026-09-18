@@ -8,19 +8,14 @@ const features = [
     desc: "728+ unique problems from Codeforces, LeetCode, and CSES — all parsed from the SMP Prep Doc.",
   },
   {
-    icon: <RotateCcw className="w-6 h-6" />,
-    title: "Spaced Repetition",
-    desc: "SM-2 algorithm schedules your reviews so you never forget what you've learned.",
-  },
-  {
     icon: <BarChart2 className="w-6 h-6" />,
     title: "Analytics Dashboard",
     desc: "Track your streaks, heatmaps, and progress across every topic.",
   },
   {
     icon: <Brain className="w-6 h-6" />,
-    title: "Markdown Notes",
-    desc: "Write and auto-save notes for every problem — right inside the tracker.",
+    title: "Interactive Markdown Notes",
+    desc: "Write rich text notes with bold, italic, code blocks and more for every problem.",
   },
 ];
 

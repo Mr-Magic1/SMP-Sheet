@@ -2,6 +2,7 @@
 
 import dbConnect from "@/lib/db";
 import { Progress } from "@/models/Progress";
+import { ActivityLog } from "@/models/ActivityLog";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
@@ -42,6 +43,9 @@ export async function updateProgressAction(
     updatePayload.usedEditorial = usedEditorial;
   }
 
+  const oldProgress = await Progress.findOne({ userId, problemId }).lean();
+  const wasSolved = oldProgress?.status === 'solved';
+
   // Find or create progress
   const progress = await Progress.findOneAndUpdate(
     { userId, problemId },
@@ -58,6 +62,19 @@ export async function updateProgressAction(
     await Progress.updateOne(
       { _id: progress._id },
       { $inc: { attempts: 1 } }
+    );
+  }
+
+  // Update ActivityLog if newly solved
+  if (status === 'solved' && !wasSolved) {
+    const today = new Date();
+    const tzOffset = today.getTimezoneOffset() * 60000;
+    const localISOTime = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
+    
+    await ActivityLog.findOneAndUpdate(
+      { userId, date: localISOTime },
+      { $inc: { solvedCount: 1 } },
+      { upsert: true }
     );
   }
 

@@ -5,7 +5,6 @@ import Heatmap from "@/components/Heatmap";
 import { Activity, Code, Trophy, Star, Shield, Medal, GitBranch, Hash } from "lucide-react";
 
 import SyncButton from "@/components/SyncButton";
-import PublicProfileToggle from "@/components/PublicProfileToggle";
 
 export default function DashboardClient({ 
   user, 
@@ -119,7 +118,6 @@ export default function DashboardClient({
         </div>
         <div className="flex items-center gap-3">
           <SyncButton />
-          <PublicProfileToggle initialIsPublic={user.settings?.publicProfile || false} />
         </div>
       </div>
       

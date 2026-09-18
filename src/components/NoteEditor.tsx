@@ -3,6 +3,13 @@
 import { useState, useEffect } from "react";
 import { saveNoteAction } from "@/actions/notes";
 import { Save } from "lucide-react";
+import dynamic from "next/dynamic";
+import { useTheme } from "@/components/ThemeProvider";
+
+const MDEditor = dynamic(
+  () => import("@uiw/react-md-editor").then((mod) => mod.default),
+  { ssr: false }
+);
 
 interface NoteEditorProps {
   problemId: string;
@@ -14,14 +21,9 @@ export default function NoteEditor({ problemId, initialBodyMd, initialSnippets }
   const [bodyMd, setBodyMd] = useState(initialBodyMd);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const { theme } = useTheme();
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      handleSave();
-    }, 2000); // autosave after 2 seconds of inactivity
 
-    return () => clearTimeout(timer);
-  }, [bodyMd]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -39,25 +41,34 @@ export default function NoteEditor({ problemId, initialBodyMd, initialSnippets }
     <div className="space-y-4">
       <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
         <span>Markdown Editor</span>
-        <div className="flex items-center gap-2">
-          {isSaving ? (
-            <span>Saving...</span>
-          ) : lastSaved ? (
-            <span className="flex items-center gap-1">
-              <Save className="w-4 h-4" /> Saved at {lastSaved.toLocaleTimeString()}
-            </span>
-          ) : (
-            <span>Unsaved</span>
-          )}
+        <div className="flex items-center gap-4">
+          <div className="text-sm">
+            {isSaving ? (
+              <span className="text-muted-foreground">Saving...</span>
+            ) : lastSaved ? (
+              <span className="text-green-500 font-medium">
+                Saved at {lastSaved.toLocaleTimeString()}
+              </span>
+            ) : null}
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={isSaving || bodyMd === initialBodyMd && !lastSaved}
+            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          >
+            <Save className="w-4 h-4" /> Save Note
+          </button>
         </div>
       </div>
-      
-      <textarea
-        value={bodyMd}
-        onChange={(e) => setBodyMd(e.target.value)}
-        className="w-full h-96 p-4 border rounded-lg bg-card text-card-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        placeholder="Write your notes here in Markdown..."
-      />
+      <div data-color-mode={theme === 'midnight' ? 'dark' : 'light'} className="rounded-lg overflow-hidden border shadow-sm">
+        <MDEditor
+          value={bodyMd}
+          onChange={(val) => setBodyMd(val || '')}
+          height={500}
+          preview="live"
+          className="w-full !border-none"
+        />
+      </div>
     </div>
   );
 }
