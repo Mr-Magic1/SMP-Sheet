@@ -63,13 +63,12 @@ export async function createWorkspaceProblemAction(topicId: string, title: strin
   }
 
   // Derive platform roughly from URL
-  let platform = 'other';
+  let platform: 'leetcode' | 'codeforces' | 'cses' | 'usaco' | 'atcoder' | 'other' = 'other';
   if (url.includes('leetcode.com')) platform = 'leetcode';
   else if (url.includes('codeforces.com')) platform = 'codeforces';
   else if (url.includes('cses.fi')) platform = 'cses';
   else if (url.includes('usaco.guide') || url.includes('usaco.org')) platform = 'usaco';
   else if (url.includes('atcoder.jp')) platform = 'atcoder';
-  else if (url.includes('geeksforgeeks.org')) platform = 'gfg';
 
   const slug = `custom-prob-${userId}-${Date.now()}`;
   
