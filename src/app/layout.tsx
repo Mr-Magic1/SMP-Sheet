@@ -5,6 +5,7 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";
 import CommandPalette from "@/components/CommandPalette";
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -69,6 +70,7 @@ export default function RootLayout({
           <CommandPalette />
           <main className="min-h-[calc(100vh-3.5rem)] pb-safe">{children}</main>
         </Providers>
+        <Analytics />
       </body>
     </html>
   );
