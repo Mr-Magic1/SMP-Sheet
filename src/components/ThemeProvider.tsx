@@ -14,13 +14,13 @@ const ThemeContext = createContext<{
   setTheme: (t: Theme) => void;
   themes: typeof THEMES;
 }>({
-  theme: "midnight",
+  theme: "light",
   setTheme: () => {},
   themes: THEMES,
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("midnight");
+  const [theme, setThemeState] = useState<Theme>("light");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo, useTransition, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import StatusCycler from "@/components/StatusCycler";
@@ -27,6 +27,7 @@ import {
   StickyNote,
 } from "lucide-react";
 import { useProgressStore } from "@/store/progress";
+import { useOptimisticProgressStore } from "@/store/optimistic";
 
 type Problem = { id: string; title: string; url: string; platform: string; status: string };
 type Pattern = { id: string; title: string; problems: Problem[] };
@@ -290,13 +291,43 @@ export default function SheetClient({
 }: {
   data: TopicData[];
   totalProblems: number;
-  solvedProblems: number;
+  solvedProblems: number; // passed from server, but we recalculate to be fully optimistic
 }) {
+  const { data: session } = useSession();
+  const guestProgress = useProgressStore(s => s.progress);
+  const overrides = useOptimisticProgressStore(s => s.overrides);
+  const isGuest = !session?.user;
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const currentData = useMemo(() => {
+    // If not mounted, just return server data to avoid hydration mismatch
+    if (!mounted) return data;
+
+    return data.map(topic => ({
+      ...topic,
+      patterns: topic.patterns.map(pat => ({
+        ...pat,
+        problems: pat.problems.map(pr => {
+          let effStatus = pr.status;
+          if (isGuest && guestProgress[pr.id]) {
+            effStatus = guestProgress[pr.id].status;
+          } else if (!isGuest && overrides[pr.id]) {
+            effStatus = overrides[pr.id];
+          }
+          return { ...pr, status: effStatus };
+        })
+      }))
+    }));
+  }, [data, mounted, isGuest, guestProgress, overrides]);
+
   const [search, setSearch]     = useState("");
   const [filter, setFilter]     = useState<StatusFilter>("all");
+
   // Filter topics by search and status filter
   const filtered = useMemo(() => {
-    let result = data;
+    let result = currentData;
     
     // Apply status filter if not "all"
     if (filter !== "all") {
@@ -332,16 +363,14 @@ export default function SheetClient({
     }
     
     return result;
-  }, [data, search, filter]);
-
-  const pct = totalProblems > 0 ? Math.round((solvedProblems / totalProblems) * 100) : 0;
+  }, [currentData, search, filter]);
 
   // Flatten all problems for graph + filter counts
   const allProblems = useMemo(() => {
     const arr: Problem[] = [];
-    data.forEach(t => t.patterns.forEach(p => arr.push(...p.problems)));
+    currentData.forEach(t => t.patterns.forEach(p => arr.push(...p.problems)));
     return arr;
-  }, [data]);
+  }, [currentData]);
 
   const filterCounts = useMemo(() => ({
     all:        allProblems.length,
@@ -350,6 +379,9 @@ export default function SheetClient({
     stuck:      allProblems.filter(p => p.status === "stuck").length,
     solved:     allProblems.filter(p => p.status === "solved").length,
   }), [allProblems]);
+
+  const actualSolvedProblems = filterCounts.solved;
+  const pct = totalProblems > 0 ? Math.round((actualSolvedProblems / totalProblems) * 100) : 0;
 
   return (
     <>
@@ -378,7 +410,7 @@ export default function SheetClient({
                 <TrendingUp className="w-4 h-4 text-primary" />
                 Overall Progress
               </span>
-              <span className="text-sm font-bold text-primary tabular-nums">{solvedProblems} / {totalProblems}</span>
+              <span className="text-sm font-bold text-primary tabular-nums">{actualSolvedProblems} / {totalProblems}</span>
             </div>
             <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
               <div
@@ -398,10 +430,10 @@ export default function SheetClient({
         {/* ── Stats grid ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           {[
-            { label: "Topics",    value: data.filter(t => t.patterns.some(p => p.problems.length > 0)).length, icon: <BookOpen className="w-4 h-4" />, colorClass: "text-primary bg-primary/8 border-primary/20" },
+            { label: "Topics",    value: currentData.filter(t => t.patterns.some(p => p.problems.length > 0)).length, icon: <BookOpen className="w-4 h-4" />, colorClass: "text-primary bg-primary/8 border-primary/20" },
             { label: "Total",     value: totalProblems,                     icon: <Circle className="w-4 h-4" />,        colorClass: "text-foreground bg-card border-border" },
-            { label: "Solved",    value: solvedProblems,                    icon: <CheckCircle2 className="w-4 h-4" />,  colorClass: "text-green-500 bg-green-500/8 border-green-500/20" },
-            { label: "Remaining", value: totalProblems - solvedProblems,    icon: <Clock className="w-4 h-4" />,         colorClass: "text-yellow-500 bg-yellow-500/8 border-yellow-500/20" },
+            { label: "Solved",    value: actualSolvedProblems,                    icon: <CheckCircle2 className="w-4 h-4" />,  colorClass: "text-green-500 bg-green-500/8 border-green-500/20" },
+            { label: "Remaining", value: totalProblems - actualSolvedProblems,    icon: <Clock className="w-4 h-4" />,         colorClass: "text-yellow-500 bg-yellow-500/8 border-yellow-500/20" },
           ].map(stat => (
             <div key={stat.label} className={`border rounded-xl p-3 sm:p-4 flex flex-col gap-1.5 ${stat.colorClass}`}>
               <div className="flex items-center gap-1.5 text-xs font-semibold opacity-75">

@@ -83,7 +83,7 @@ export async function syncIntegrationsAction() {
           const prog = await Progress.findOneAndUpdate(
             { userId, problemId: p._id },
             { $set: { status: 'solved', solvedAt: new Date() } },
-            { upsert: true, new: false }
+            { upsert: true, returnDocument: 'before' }
           );
           if (!prog || prog.status !== 'solved') syncedCount++;
         }
@@ -101,7 +101,7 @@ export async function syncIntegrationsAction() {
           const prog = await Progress.findOneAndUpdate(
             { userId, problemId: p._id },
             { $set: { status: 'solved', solvedAt: new Date() } },
-            { upsert: true, new: false }
+            { upsert: true, returnDocument: 'before' }
           );
           if (!prog || prog.status !== 'solved') syncedCount++;
         }

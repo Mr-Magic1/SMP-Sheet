@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { updateProgressAction } from "@/actions/progress";
 import { CheckCircle2, CircleDashed, Clock, XCircle, RefreshCw } from "lucide-react";
 import { useProgressStore } from "@/store/progress";
+import { useOptimisticProgressStore } from "@/store/optimistic";
 import { useSession } from "next-auth/react";
 
 type Status = "todo" | "attempting" | "stuck" | "solved" | "revisit";
@@ -50,48 +51,37 @@ interface StatusCyclerProps {
 
 export default function StatusCycler({ problemId, initialStatus = "todo" }: StatusCyclerProps) {
   const { data: session } = useSession();
-  const guestProgress = useProgressStore((state) => state.progress[problemId]);
   const setGuestProgress = useProgressStore((state) => state.setProgress);
+  const setOverride = useOptimisticProgressStore((state) => state.setOverride);
   
-  // If guest, use local state; if logged in, use server state
   const isGuest = !session?.user;
-  const currentStatus = isGuest 
-    ? (guestProgress?.status || "todo") 
-    : initialStatus;
-
-  const [optimisticStatus, setOptimisticStatus] = useState<Status>(currentStatus);
   const [isPending, startTransition] = useTransition();
 
   const handleCycle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    const currentIndex = statuses.indexOf(optimisticStatus);
+    const currentIndex = statuses.indexOf(initialStatus);
     const nextStatus = statuses[(currentIndex + 1) % statuses.length];
-    
-    setOptimisticStatus(nextStatus);
     
     if (isGuest) {
       setGuestProgress(problemId, nextStatus);
     } else {
-      // We don't await here to prevent the UI from freezing.
-      // startTransition fires it off in the background.
+      setOverride(problemId, nextStatus);
       startTransition(() => {
-        updateProgressAction(problemId, nextStatus).catch(e => {
-          console.error("Failed to update status", e);
-          setOptimisticStatus(currentStatus); // revert
+        updateProgressAction(problemId, nextStatus).catch(err => {
+          console.error("Failed to update status", err);
         });
       });
     }
   };
 
-  const config = statusConfig[optimisticStatus];
+  const config = statusConfig[initialStatus] || statusConfig.todo;
   const Icon = config.icon;
 
   return (
     <button
       onClick={handleCycle}
-      // Removed disabled={isPending} so user can rapidly click
       className={`flex items-center justify-center p-2 rounded-md transition-all hover:bg-accent ${config.color} ${config.bg} ${isPending ? 'opacity-70' : ''}`}
       title={config.label}
     >

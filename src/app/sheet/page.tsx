@@ -7,27 +7,21 @@ import { Resource } from '@/models/Resource';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import SheetClient from './SheetClient';
-import { unstable_cache } from 'next/cache';
+async function getCachedSheetData() {
+  await dbConnect();
 
-const getCachedSheetData = unstable_cache(
-  async () => {
-    await dbConnect();
+  const topics = await Topic.find({}).sort({ order: 1 }).lean();
+  const patterns = await Pattern.find({}).sort({ order: 1 }).lean();
+  const problems = await Problem.find({}).sort({ order: 1 }).lean();
+  const resources = await Resource.find({}).lean();
 
-    const topics = await Topic.find({}).sort({ order: 1 }).lean();
-    const patterns = await Pattern.find({}).sort({ order: 1 }).lean();
-    const problems = await Problem.find({}).sort({ order: 1 }).lean();
-    const resources = await Resource.find({}).lean();
-
-    return {
-      topics: JSON.parse(JSON.stringify(topics)),
-      patterns: JSON.parse(JSON.stringify(patterns)),
-      problems: JSON.parse(JSON.stringify(problems)),
-      resources: JSON.parse(JSON.stringify(resources)),
-    };
-  },
-  ['sheet-static-data-v1'],
-  { revalidate: 3600 * 24 } // cache for 24 hours
-);
+  return {
+    topics: JSON.parse(JSON.stringify(topics)),
+    patterns: JSON.parse(JSON.stringify(patterns)),
+    problems: JSON.parse(JSON.stringify(problems)),
+    resources: JSON.parse(JSON.stringify(resources)),
+  };
+}
 
 async function getUserProgress() {
   const session = await getServerSession(authOptions);

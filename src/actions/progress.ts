@@ -55,7 +55,7 @@ export async function updateProgressAction(
       $setOnInsert: { firstAttemptedAt: new Date() },
       // Increment attempts if status changes to attempting
     },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: 'after' }
   );
 
   // If status is attempting, increment attempts counter
@@ -118,6 +118,6 @@ export async function updateProgressAction(
   revalidatePath('/sheet');
   revalidatePath('/profile');
   
-  return { success: true, progress: progress.toJSON() };
+  return { success: true };
 }
 
