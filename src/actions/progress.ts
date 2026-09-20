@@ -121,3 +121,27 @@ export async function updateProgressAction(
   return { success: true };
 }
 
+export async function toggleStarAction(problemId: string, starred: boolean) {
+  const session = await getServerSession(authOptions);
+  
+  if (!session || !session.user) {
+    throw new Error("Unauthorized");
+  }
+
+  await dbConnect();
+  const userId = (session.user as any).id;
+
+  await Progress.findOneAndUpdate(
+    { userId, problemId },
+    {
+      $set: { starred },
+      $setOnInsert: { status: 'todo', firstAttemptedAt: new Date() }
+    },
+    { upsert: true }
+  );
+
+  revalidatePath('/sheet');
+  revalidatePath('/workspace');
+  
+  return { success: true };
+}

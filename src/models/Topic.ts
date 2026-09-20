@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface ITopic extends Document {
+  userId?: mongoose.Types.ObjectId;
   sheetId: string;
   sectionId: string;
   slug: string;
@@ -13,6 +14,7 @@ export interface ITopic extends Document {
 }
 
 const TopicSchema: Schema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User' },
   sheetId: { type: String, required: true },
   sectionId: { type: String, required: true },
   slug: { type: String, required: true, unique: true },
@@ -23,5 +25,8 @@ const TopicSchema: Schema = new Schema({
   prerequisites: [{ type: String }],
   resources: [{ type: Schema.Types.Mixed }] // Can reference external Resource docs or embedded
 }, { timestamps: true });
+
+TopicSchema.index({ userId: 1 });
+TopicSchema.index({ order: 1 });
 
 export const Topic: Model<ITopic> = mongoose.models.Topic || mongoose.model<ITopic>('Topic', TopicSchema);

@@ -8,12 +8,13 @@ interface LocalProgress {
     status: Status;
     difficultyFelt?: number;
     usedEditorial?: boolean;
+    starred?: boolean;
   };
 }
 
 interface ProgressState {
   progress: LocalProgress;
-  setProgress: (problemId: string, status: Status, difficultyFelt?: number, usedEditorial?: boolean) => void;
+  setProgress: (problemId: string, status: Status, difficultyFelt?: number, usedEditorial?: boolean, starred?: boolean) => void;
   clearProgress: () => void;
   resetAll: () => void;
 }
@@ -22,7 +23,7 @@ export const useProgressStore = create<ProgressState>()(
   persist(
     (set) => ({
       progress: {},
-      setProgress: (problemId, status, difficultyFelt, usedEditorial) =>
+      setProgress: (problemId, status, difficultyFelt, usedEditorial, starred) =>
         set((state) => ({
           progress: {
             ...state.progress,
@@ -31,6 +32,7 @@ export const useProgressStore = create<ProgressState>()(
               status,
               ...(difficultyFelt !== undefined && { difficultyFelt }),
               ...(usedEditorial !== undefined && { usedEditorial }),
+              ...(starred !== undefined && { starred }),
             },
           },
         })),

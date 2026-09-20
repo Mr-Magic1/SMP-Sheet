@@ -25,11 +25,13 @@ import {
   Hash,
   TrendingUp,
   StickyNote,
+  Star,
 } from "lucide-react";
+import { toggleStarAction } from "@/actions/progress";
 import { useProgressStore } from "@/store/progress";
 import { useOptimisticProgressStore } from "@/store/optimistic";
 
-type Problem = { id: string; title: string; url: string; platform: string; status: string };
+type Problem = { id: string; title: string; url: string; platform: string; status: string; starred: boolean };
 type Pattern = { id: string; title: string; problems: Problem[] };
 type Resource = { id: string; kind: string; title: string; url: string };
 type TopicData = { id: string; title: string; resources: Resource[]; patterns: Pattern[] };
@@ -58,7 +60,39 @@ const FILTER_OPTIONS: { id: StatusFilter; label: string; icon: React.ReactNode; 
 ];
 
 /* ─── ProblemRow ────────────────────────────────────── */
-function ProblemRow({ problem }: { problem: Problem }) {
+function ProblemRow({ problem, onDelete }: { problem: Problem; onDelete?: (id: string) => void }) {
+  const { data: session } = useSession();
+  const isGuest = !session?.user;
+  const guestProgress = useProgressStore(s => s.progress);
+  const setGuestProgress = useProgressStore(s => s.setProgress);
+  
+  const starredOverrides = useOptimisticProgressStore(s => s.starredOverrides);
+  const setStarredOverride = useOptimisticProgressStore(s => s.setStarredOverride);
+  const [isPending, startTransition] = useTransition();
+
+  // Compute effective starred status
+  let effStarred = problem.starred;
+  if (isGuest && guestProgress[problem.id] && guestProgress[problem.id].starred !== undefined) {
+    effStarred = guestProgress[problem.id].starred as boolean;
+  } else if (!isGuest && starredOverrides[problem.id] !== undefined) {
+    effStarred = starredOverrides[problem.id];
+  }
+
+  const handleStar = () => {
+    const newStarred = !effStarred;
+    if (isGuest) {
+      const currentStatus = guestProgress[problem.id]?.status || 'todo';
+      const difficultyFelt = guestProgress[problem.id]?.difficultyFelt;
+      const usedEditorial = guestProgress[problem.id]?.usedEditorial;
+      setGuestProgress(problem.id, currentStatus, difficultyFelt, usedEditorial, newStarred);
+    } else {
+      setStarredOverride(problem.id, newStarred);
+      startTransition(() => {
+        toggleStarAction(problem.id, newStarred).catch(console.error);
+      });
+    }
+  };
+
   const pc = PLATFORM_CONFIG[problem.platform] ?? { label: problem.platform.slice(0, 4).toUpperCase(), style: "bg-muted text-muted-foreground border border-border" };
 
   return (
@@ -84,11 +118,29 @@ function ProblemRow({ problem }: { problem: Problem }) {
         {/* Notes link — always visible on mobile */}
         <Link
           href={`/notes/${problem.id}`}
-          className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+          className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
           title="Open notes"
         >
           <StickyNote className="w-3.5 h-3.5" />
         </Link>
+        <button
+          onClick={handleStar}
+          className={`p-1 rounded-md transition-colors ${
+            effStarred ? 'text-yellow-500 hover:bg-yellow-500/10' : 'text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10'
+          }`}
+          title={effStarred ? "Unstar question" : "Star question"}
+        >
+          <Star className="w-3.5 h-3.5" fill={effStarred ? "currentColor" : "none"} />
+        </button>
+        {onDelete && (
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(problem.id); }}
+            className="p-1 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+            title="Delete question"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        )}
         <span className={`text-[10px] px-1.5 py-0.5 rounded-md uppercase tracking-wider font-bold flex-shrink-0 ${pc.style}`}>
           {pc.label}
         </span>
@@ -98,7 +150,7 @@ function ProblemRow({ problem }: { problem: Problem }) {
 }
 
 /* ─── PatternSection ────────────────────────────────── */
-function PatternSection({ pattern, filter }: { pattern: Pattern; filter: StatusFilter }) {
+function PatternSection({ pattern, filter, onDeleteProblem }: { pattern: Pattern; filter: StatusFilter; onDeleteProblem?: (id: string) => void }) {
   const [open, setOpen] = useState(true);
 
   const displayProblems = useMemo(() =>
@@ -143,7 +195,7 @@ function PatternSection({ pattern, filter }: { pattern: Pattern; filter: StatusF
       {open && (
         <ul className="p-2 space-y-0.5">
           {displayProblems.map(problem => (
-            <ProblemRow key={problem.id} problem={problem} />
+            <ProblemRow key={problem.id} problem={problem} onDelete={onDeleteProblem} />
           ))}
         </ul>
       )}
@@ -152,7 +204,7 @@ function PatternSection({ pattern, filter }: { pattern: Pattern; filter: StatusF
 }
 
 /* ─── TopicCard ─────────────────────────────────────── */
-function TopicCard({ topic, filter }: { topic: TopicData; filter: StatusFilter }) {
+function TopicCard({ topic, filter, onDeleteTopic, onDeleteProblem }: { topic: TopicData; filter: StatusFilter; onDeleteTopic?: (id: string) => void; onDeleteProblem?: (id: string) => void }) {
   const [open, setOpen] = useState(false);
 
   const total      = topic.patterns.reduce((s, p) => s + p.problems.length, 0);
@@ -171,9 +223,12 @@ function TopicCard({ topic, filter }: { topic: TopicData; filter: StatusFilter }
   return (
     <div className="border border-border rounded-2xl overflow-hidden bg-card shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/30">
       {/* Topic header button */}
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-3 px-4 sm:px-5 py-4 hover:bg-accent/20 transition-colors text-left"
+        onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(o => !o); } }}
+        className="w-full flex items-center gap-3 px-4 sm:px-5 py-4 hover:bg-accent/20 transition-colors text-left cursor-pointer"
       >
         {/* Icon */}
         <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
@@ -210,17 +265,28 @@ function TopicCard({ topic, filter }: { topic: TopicData; filter: StatusFilter }
           </div>
         </div>
 
-        {/* Progress indicator (hidden on very small screens) */}
-        <div className="hidden sm:flex flex-col items-end gap-1.5 flex-shrink-0">
-          <span className="text-sm font-bold text-primary tabular-nums">{pct}%</span>
-          <div className="w-24 md:w-32 h-2 bg-muted rounded-full overflow-hidden">
+        {/* Progress indicator & Delete */}
+        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            {onDeleteTopic && (
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDeleteTopic(topic.id); }}
+                className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                title="Delete topic"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+            <span className="text-sm font-bold text-primary tabular-nums hidden sm:inline">{pct}%</span>
+          </div>
+          <div className="w-24 md:w-32 h-2 bg-muted rounded-full overflow-hidden hidden sm:block">
             <div
               className="h-full bg-gradient-to-r from-primary to-primary/60 rounded-full transition-all duration-700"
               style={{ width: `${pct}%` }}
             />
           </div>
         </div>
-      </button>
+      </div>
 
       {/* Expanded content */}
       {open && (
@@ -273,7 +339,7 @@ function TopicCard({ topic, filter }: { topic: TopicData; filter: StatusFilter }
                 return p.problems.some(pr => pr.status === filter);
               })
               .map((pattern) => (
-                <PatternSection key={pattern.id} pattern={pattern} filter={filter} />
+                <PatternSection key={pattern.id} pattern={pattern} filter={filter} onDeleteProblem={onDeleteProblem} />
               ))
             }
           </div>
@@ -288,14 +354,19 @@ export default function SheetClient({
   data,
   totalProblems,
   solvedProblems,
+  onDeleteTopic,
+  onDeleteProblem,
 }: {
   data: TopicData[];
   totalProblems: number;
   solvedProblems: number; // passed from server, but we recalculate to be fully optimistic
+  onDeleteTopic?: (id: string) => void;
+  onDeleteProblem?: (id: string) => void;
 }) {
   const { data: session } = useSession();
   const guestProgress = useProgressStore(s => s.progress);
   const overrides = useOptimisticProgressStore(s => s.overrides);
+  const starredOverrides = useOptimisticProgressStore(s => s.starredOverrides);
   const isGuest = !session?.user;
 
   const [mounted, setMounted] = useState(false);
@@ -316,11 +387,17 @@ export default function SheetClient({
           } else if (!isGuest && overrides[pr.id]) {
             effStatus = overrides[pr.id];
           }
-          return { ...pr, status: effStatus };
+          let effStarred = pr.starred;
+          if (isGuest && guestProgress[pr.id] && guestProgress[pr.id].starred !== undefined) {
+            effStarred = guestProgress[pr.id].starred as boolean;
+          } else if (!isGuest && starredOverrides[pr.id] !== undefined) {
+            effStarred = starredOverrides[pr.id];
+          }
+          return { ...pr, status: effStatus, starred: effStarred };
         })
       }))
     }));
-  }, [data, mounted, isGuest, guestProgress, overrides]);
+  }, [data, mounted, isGuest, guestProgress, overrides, starredOverrides]);
 
   const [search, setSearch]     = useState("");
   const [filter, setFilter]     = useState<StatusFilter>("all");
@@ -504,7 +581,7 @@ export default function SheetClient({
             </div>
           ) : (
             filtered.map(topic => (
-              <TopicCard key={topic.id} topic={topic} filter={filter} />
+              <TopicCard key={topic.id} topic={topic} filter={filter} onDeleteTopic={onDeleteTopic} onDeleteProblem={onDeleteProblem} />
             ))
           )}
         </div>

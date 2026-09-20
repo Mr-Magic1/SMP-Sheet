@@ -12,6 +12,7 @@ import {
   Zap,
   ChevronDown,
   User,
+  Briefcase,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
@@ -79,6 +80,7 @@ export default function Navbar() {
   const links = [
     { name: "Sheet", href: "/sheet", icon: <BookOpen className="w-4 h-4" /> },
     { name: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
+    { name: "Workspace", href: "/workspace", icon: <Briefcase className="w-4 h-4" /> },
   ];
 
   return (

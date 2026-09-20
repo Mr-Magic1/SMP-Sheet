@@ -3,34 +3,29 @@ import { Topic } from '@/models/Topic';
 import { Pattern } from '@/models/Pattern';
 import { Problem } from '@/models/Problem';
 import { Progress } from '@/models/Progress';
-import { Resource } from '@/models/Resource';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import SheetClient from './SheetClient';
-async function getCachedSheetData() {
+import WorkspaceClient from './WorkspaceClient';
+import { redirect } from 'next/navigation';
+
+async function getUserWorkspaceData(userId: string) {
   await dbConnect();
 
-  const [topics, patterns, problems, resources] = await Promise.all([
-    Topic.find({ userId: { $exists: false } }).sort({ order: 1 }).lean(),
-    Pattern.find({ userId: { $exists: false } }).sort({ order: 1 }).lean(),
-    Problem.find({ userId: { $exists: false } }).sort({ order: 1 }).lean(),
-    Resource.find({}).lean(),
+  const [topics, patterns, problems] = await Promise.all([
+    Topic.find({ userId }).sort({ order: 1 }).lean(),
+    Pattern.find({ userId }).sort({ order: 1 }).lean(),
+    Problem.find({ userId }).sort({ order: 1 }).lean(),
   ]);
-
+  
   return {
     topics: JSON.parse(JSON.stringify(topics)),
     patterns: JSON.parse(JSON.stringify(patterns)),
     problems: JSON.parse(JSON.stringify(problems)),
-    resources: JSON.parse(JSON.stringify(resources)),
   };
 }
 
-async function getUserProgress() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) return {};
-
+async function getUserProgress(userId: string) {
   await dbConnect();
-  const userId = (session.user as any).id;
   const progressDocs = await Progress.find({ userId }).lean();
 
   const progressMap: Record<string, { status: string; starred: boolean }> = {};
@@ -44,20 +39,18 @@ async function getUserProgress() {
   return progressMap;
 }
 
-export default async function SheetPage() {
-  const [{ topics, patterns, problems, resources }, userProgress] = await Promise.all([
-    getCachedSheetData(),
-    getUserProgress(),
-  ]);
+export default async function WorkspacePage() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    redirect('/auth/login');
+  }
 
-  // Grouping for O(1) lookups
-  const resourcesByTopic: Record<string, any[]> = {};
-  resources.forEach((r: any) => {
-    const rid = (r.topicId || r.ownerId)?.toString();
-    if (!rid) return;
-    if (!resourcesByTopic[rid]) resourcesByTopic[rid] = [];
-    resourcesByTopic[rid].push({ id: r._id.toString(), kind: r.kind, title: r.title, url: r.url || '#' });
-  });
+  const userId = (session.user as any).id;
+
+  const [{ topics, patterns, problems }, userProgress] = await Promise.all([
+    getUserWorkspaceData(userId),
+    getUserProgress(userId)
+  ]);
 
   const problemsByPattern: Record<string, any[]> = {};
   problems.forEach((pr: any) => {
@@ -84,13 +77,12 @@ export default async function SheetPage() {
     });
   });
 
-  // Serialize for client
   const data = topics.map((topic: any) => {
     const tid = topic._id.toString();
     return {
       id: tid,
       title: topic.title,
-      resources: resourcesByTopic[tid] || [],
+      resources: [],
       patterns: patternsByTopic[tid] || [],
     };
   });
@@ -103,5 +95,5 @@ export default async function SheetPage() {
     }
   });
 
-  return <SheetClient data={data} totalProblems={totalProblems} solvedProblems={solvedProblems} />;
+  return <WorkspaceClient data={data} totalProblems={totalProblems} solvedProblems={solvedProblems} />;
 }

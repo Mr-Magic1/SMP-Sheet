@@ -109,9 +109,9 @@ export default function Home() {
                 <Code className="w-5 h-5 text-primary" /> Created & Maintained By
               </h3>
               <ul className="space-y-2 text-muted-foreground">
-                <li><a href="#" className="hover:text-primary transition-colors flex items-center justify-center sm:justify-start gap-2">Krishna Mittal <ExternalLink className="w-3 h-3"/></a></li>
-                <li><a href="#" className="hover:text-primary transition-colors flex items-center justify-center sm:justify-start gap-2">Sachit Jain <ExternalLink className="w-3 h-3"/></a></li>
-                <li><a href="#" className="hover:text-primary transition-colors flex items-center justify-center sm:justify-start gap-2">Rudransh Pratap Singh <ExternalLink className="w-3 h-3"/></a></li>
+                <li><a href="https://www.linkedin.com/in/krishna-mittal-0b1964323/" target="_blank" className="hover:text-primary transition-colors flex items-center justify-center sm:justify-start gap-2">Krishna Mittal <ExternalLink className="w-3 h-3"/></a></li>
+                <li><a href="https://www.linkedin.com/in/sachit-jain-4214b530a/" target="_blank" className="hover:text-primary transition-colors flex items-center justify-center sm:justify-start gap-2">Sachit Jain <ExternalLink className="w-3 h-3"/></a></li>
+                <li><a href="https://www.linkedin.com/in/rudranshpratapsingh/" target="_blank" className="hover:text-primary transition-colors flex items-center justify-center sm:justify-start gap-2">Rudransh Pratap Singh <ExternalLink className="w-3 h-3"/></a></li>
               </ul>
               <p className="text-xs font-medium text-primary bg-primary/10 inline-block px-2 py-1 rounded-md">Pre-Final Year SMP Mentors, Batch of '28</p>
             </div>
@@ -143,7 +143,7 @@ export default function Home() {
                 >
                   Kailash Vishwakarma <ExternalLink className="w-4 h-4"/>
                 </a>
-                <p className="text-sm">Batch of 2029</p>
+                <p className="text-xs font-medium text-purple-500 bg-purple-500/10 inline-block px-2 py-1 rounded-md mt-1">Batch of '29</p>
               </div>
             </div>
           </div>
